@@ -1,0 +1,124 @@
+<html>
+	<head>
+		<title>EPOD Viewer</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-title" content="EPOD">
+		<link rel="apple-touch-icon" href="icon.png">
+		<meta name="mobile-web-app-capable" content="yes">
+		<link rel="shortcut icon" href="icon.png">
+		<meta name="description" content="A mobile EPOD (Earth Science Picture of the Day) Viewer">
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+				font-size: 14px;
+				background: black;
+				color: white;
+			}
+			.info {
+				color: gray;
+			}
+			.title span {
+				color: gray;
+				font-size: 0.8em;
+			}
+			a {
+				color: #cff;
+			}
+			#header {
+				font-size: 18px;
+			}
+			#header a {
+				background: #666;
+				border: #ccc;
+				padding: 5px;
+				margin-left: 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="header">&#x1F30E; <strong title="Earth Science Picture of the Day">EPOD</strong> <a id="next">Backward</a> <a id="prev">Forward</a></div>
+		<div id="feed">
+			<h3><em>loading...</em></h3>
+		</div>
+		<hr>
+		<div>This is a mobile web friendly mirror of <a href="http://epod.usra.edu/" target="blank">EPOD</a>.</div>
+		<script src='https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js'></script>
+		<script>
+			$(document).ready(function() {
+				var current = 0;
+				var max = 0;
+				var $posts = [];
+				$.ajax({
+					url: "http://api.typepad.com/blogs/6a0105371bb32c970b01116856275e970c/post-assets/@published/@recent.json",
+					crossDomain: true,
+					success: function(data) {
+						var $feed = $("#feed").empty();
+						for (var i in data.entries) {
+							var post = data.entries[i];
+							var $post = $("<div>").addClass("post");
+							$post.append($("<h3>").addClass("title").text(post.title));
+							var categories = post.categories.filter(function(x) {
+								return x[0] != "_";
+							}).join(", ");
+							var pubDate = new Date(post.published).toISOString().substr(0, 10);
+							var info = pubDate + ' | <a href="' + post.permalinkUrl + '" target="blank">Permalink</a> | ' + categories;
+							$post.append($("<p>").addClass("info").html(info));
+							var $content = $("<div>").addClass("content").html(post.renderedContent.replace(/src/g, "data-src"));
+							$("img", $content).each(function() {
+								var $img = $(this);
+								if (!$img.attr("align")) {
+									$img.css({
+										"width": "100%",
+										"height": "auto",
+										"display": "block"
+									});
+								}
+							});
+							$("a", $content).each(function() {
+								$(this).attr("target", "blank");
+							});
+							$post.append($content);
+							$posts[i] = $post;
+						}
+
+						function loadImages($post) {
+							if (!$post || $post.attr("loaded")) {
+								return;
+							}
+							$post.attr("loaded", "1");
+							$(".content img", $post).each(function() {
+								var $img = $(this);
+								$img.attr("src", $img.attr("data-src"));
+							});
+						}
+
+						function load() {
+							$feed.empty();
+							var $post = $posts[current];
+							loadImages($post);
+							var $nextPost = $posts[current + 1];
+							loadImages($nextPost);
+							$feed.append($post);
+						}
+
+						load();
+
+						$("#next").click(function() {
+							if (current != $posts.length - 1) {
+								current++;
+								load();
+							}
+						});
+						$("#prev").click(function() {
+							if (current != 0) {
+								current--;
+								load();
+							}
+						});
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
